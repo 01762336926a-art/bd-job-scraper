@@ -132,3 +132,6 @@ if __name__ == "__main__":
     extracted_jobs = scrape_teletalk_jobs()
     print(f"মোট {len(extracted_jobs)} টি চাকরির তথ্য পাওয়া গেছে।")
     print(json.dumps(extracted_jobs, ensure_ascii=False, indent=2))
+# Test Message Call
+send_whatsapp_message("🎉 টেস্ট নোটিফিকেশন: এরশাদ কম্পিউটার & ইন্টারনেট পয়েন্টের জব অ্যালার্ট বট সফলভাবে চালু হয়েছে!")
+ 

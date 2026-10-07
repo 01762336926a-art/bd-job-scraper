@@ -1,9 +1,9 @@
-.name: Run Job Scraper
+name: Run Job Scraper
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # প্রতি ৬ ঘণ্টা পর পর স্বয়ংক্রিয়ভাবে চলবে
-  workflow_dispatch:      # ম্যানুয়ালি রান করার অপশন
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   scrape:

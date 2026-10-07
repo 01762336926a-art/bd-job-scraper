@@ -1,10 +1,9 @@
-name: Run Job Scraper
+.name: Run Job Scraper
 
 on:
   schedule:
-    # বাংলাদেশ সময় প্রতিদিন সকাল ৮:০০ টায় স্বয়ংক্রিয়ভাবে রান হবে (UTC 02:00)
-    - cron: '0 2 * * *'
-  workflow_dispatch: # যেকোনো সময় ম্যানুয়ালি রান করার জন্য
+    - cron: '0 */6 * * *'  # প্রতি ৬ ঘণ্টা পর পর স্বয়ংক্রিয়ভাবে চলবে
+  workflow_dispatch:      # ম্যানুয়ালি রান করার অপশন
 
 jobs:
   scrape:
@@ -26,6 +25,8 @@ jobs:
 
       - name: Run Scraper
         env:
+          GREEN_API_INSTANCE_ID: ${{ secrets.GREEN_API_INSTANCE_ID }}
+          GREEN_API_TOKEN: ${{ secrets.GREEN_API_TOKEN }}
+          WHATSAPP_GROUP_ID: ${{ secrets.WHATSAPP_GROUP_ID }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          python scraper.py
+        run: python scraper.py

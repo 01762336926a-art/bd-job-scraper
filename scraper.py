@@ -6,7 +6,7 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Environtment Variables (GitHub Secrets থেকে আসা)
+# Environment Variables (GitHub Secrets থেকে আসা)
 instance_id = os.environ.get("GREEN_API_INSTANCE_ID")
 api_token = os.environ.get("GREEN_API_TOKEN")
 group_id = os.environ.get("WHATSAPP_GROUP_ID")
@@ -34,6 +34,7 @@ def send_whatsapp_job(title, organization, deadline, apply_url):
 
     url = f"https://api.green-api.com/waInstance{instance_id}/sendMessage/{api_token}"
     
+    # অটোমেটিক আসা সার্কুলারের মেসেজ ফরম্যাট ও সঠিক ঠিকানা
     message = (
         f"📢 *নতুন চাকরির বিজ্ঞপ্তি*\n\n"
         f"📌 *পদ:* {title}\n"
@@ -42,7 +43,7 @@ def send_whatsapp_job(title, organization, deadline, apply_url):
         f"🔗 *আবেদন লিঙ্ক:* {apply_url}\n\n"
         f"সহজে ও নির্ভুলভাবে আবেদনের জন্য সরাসরি চলে আসুন:\n"
         f"👉 *এরশাদ কম্পিউটার & ইন্টারনেট পয়েন্ট*\n"
-        f"📍 আগ্রাদ্বিগুণ বাজার, ধামইরহাট, নওগাঁ\n"
+        f"📍 আগ্রাদ্বিগুন বাজার, চারমাথার মোড়, VIP রোড, ধামইরহাট, নওগাঁ\n"
         f"📞 যোগাযোগ: 01309897414"
     )
 
@@ -101,7 +102,7 @@ def scrape_teletalk_jobs():
 
                 job_list.append(job_data)
 
-                # ফায়ারবেসে চেক ও সেভ
+                # ফায়ারবেসে ডুপ্লিকেট চেক ও হোয়াটসঅ্যাপে অটো-মেসেজ সেন্ড
                 if db:
                     doc_ref = db.collection("job_circulars").document(job_data["id"])
                     if not doc_ref.get().exists:
@@ -117,6 +118,4 @@ def scrape_teletalk_jobs():
 if __name__ == "__main__":
     extracted_jobs = scrape_teletalk_jobs()
     print(f"মোট {len(extracted_jobs)} টি চাকরির তথ্য পাওয়া গেছে।")
-    
-    # টেস্ট মেসেজ পাঠানোর জন্য (একবার মেসেজ পেয়ে গেলে নিচের লাইনটির শুরুতে # দিয়ে অফ করতে পারবে)
-    send_whatsapp_job("টেস্ট চাকরির বিজ্ঞপ্তি", "এরশাদ কম্পিউটার", "আজই শেষ দিন", "https://alljobs.teletalk.com.bd")
+ 

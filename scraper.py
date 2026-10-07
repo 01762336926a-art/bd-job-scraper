@@ -133,5 +133,5 @@ if __name__ == "__main__":
     print(f"মোট {len(extracted_jobs)} টি চাকরির তথ্য পাওয়া গেছে।")
     print(json.dumps(extracted_jobs, ensure_ascii=False, indent=2))
 # Test Message Call
-send_whatsapp_message("🎉 টেস্ট নোটিফিকেশন: এরশাদ কম্পিউটার & ইন্টারনেট পয়েন্টের জব অ্যালার্ট বট সফলভাবে চালু হয়েছে!")
- 
+send_whatsapp_job("টেস্ট চাকরির বিজ্ঞপ্তি", "এরশাদ কম্পিউটার", "আজই শেষ দিন", "https://alljobs.teletalk.com.bd")
+

@@ -2,19 +2,20 @@ name: Run Job Scraper
 
 on:
   schedule:
-    # প্রতি ৩ ঘণ্টা পর পর অটোমেটিক রান হবে
-    - cron: '0 */3 * * *'
-  workflow_dispatch: # ম্যানুয়ালি যেকোনো সময় টেস্ট করার সুবিধা
+    # বাংলাদেশ সময় প্রতিদিন সকাল ৮:০০ টায় স্বয়ংক্রিয়ভাবে রান হবে (UTC 02:00)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # যেকোনো সময় ম্যানুয়ালি রান করার জন্য
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -24,4 +25,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Scraper
-        run: python scraper.py
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          python scraper.py

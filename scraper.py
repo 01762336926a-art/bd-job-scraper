@@ -36,92 +36,96 @@ def send_to_whatsapp(message):
 
     response = requests.post(url, json=payload)
     if response.status_code == 200:
-        print("Successfully sent message to WhatsApp group!")
+        print("Successfully sent single job update to WhatsApp group!")
     else:
         print(f"Failed to send WhatsApp message: {response.text}")
 
-def scrape_and_store_teletalk_jobs():
+def fetch_and_store_jobs():
     """
-    টেলিটক অল জবস সাইট থেকে রানিং জবগুলো স্ক্রেপ করে ফায়ারবেসে স্টোর করার লজিক
+    বিডিজবস বা অন্যান্য পোর্টাল থেকে রানিং জব ফেচ করে ফায়ারবেসে স্টোর করা
     """
-    url = "https://alljobs.teletalk.com.bd/"
+    if not db:
+        return
+
+    url = "https://jobs.bdjobs.com/jobsearch.asp?icatId=3"
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
     
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
+            job_cards = soup.select('.job-title-text, .s-job-card, h2.title')
             
-            # টেলিটক সাইটের লেআউট অনুযায়ী রানিং জবগুলোর তথ্য এক্সট্রাক্ট করা
-            # (এখানে জব কার্ডগুলো থেকে টাইপ, কোম্পানি, লিংক সংগ্রহ করা হবে)
-            # যদি ডেটা ফায়ারবেসে অলরেডি না থাকে, তবে নতুন হিসেবে সেভ হবে।
-            print("Successfully checked Teletalk AllJobs for updates.")
+            for card in job_cards[:10]:
+                title = card.get_text(strip=True)
+                if not title:
+                    continue
+                link = card.find('a')['href'] if card.name == 'a' or card.find('a') else "https://jobs.bdjobs.com"
+                if link and not link.startswith('http'):
+                    link = "https://jobs.bdjobs.com/" + link
+                
+                jobs_ref = db.collection('jobs')
+                query = jobs_ref.where('title', '==', title).limit(1).get()
+                
+                if not list(query):
+                    jobs_ref.add({
+                        'title': title,
+                        'company': 'বিডিজবস পোর্টাল',
+                        'link': link,
+                        'sent_to_whatsapp': False
+                    })
     except Exception as e:
-        print(f"Error scraping Teletalk: {e}")
+        print(f"Error fetching jobs: {e}")
 
-def get_pending_jobs_batch_from_firebase():
+def send_single_job_from_firebase():
     """
-    ফায়ারবেস থেকে একসাথে ১০-১৫টি করে আনসেন্ট (unsent) চাকরির আপডেট ফেচ করা
+    ফায়ারবেস থেকে ঠিক ১টি নতুন চাকরির আপডেট নিয়ে নির্দিষ্ট ফরম্যাটে পাঠানো
     """
     if not db:
         print("Firebase database not connected.")
-        return None
+        return
 
     try:
-        # যেগুলো এখনো হোয়াটসঅ্যাপে পাঠানো হয়নি এমন ১০টি জব একসাথে নিয়ে আসা
-        jobs_ref = db.collection('jobs').where('sent_to_whatsapp', '==', False).limit(10)
+        # মাত্র ১টি আনসেন্ট জব ফেচ করা (.limit(1))
+        jobs_ref = db.collection('jobs').where('sent_to_whatsapp', '==', False).limit(1)
         docs = list(jobs_ref.stream())
         
         if not docs:
-            print("No new jobs to send.")
-            return None
+            print("No new pending jobs to send.")
+            return
             
-        jobs_text_list = []
-        batch_docs = []
+        doc = docs[0]
+        job_data = doc.to_dict()
+        title = job_data.get('title', 'চাকরির পদ')
+        company = job_data.get('company', 'প্রতিষ্ঠান')
+        link = job_data.get('link', 'https://jobs.bdjobs.com')
         
-        for idx, doc in enumerate(docs, 1):
-            job_data = doc.to_dict()
-            title = job_data.get('title', 'চাকরির পদ')
-            company = job_data.get('company', 'প্রতিষ্ঠান')
-            link = job_data.get('link', 'https://alljobs.teletalk.com.bd')
-            
-            jobs_text_list.append(f"{idx}. 📌 পদ: {title}\n🏢 প্রতিষ্ঠান: {company}\n🔗 {link}\n")
-            batch_docs.append(doc)
-            
-        # একসাথে পাঠানো মেসেজের ফরম্যাট
-        jobs_joined = "\n".join(jobs_text_list)
-        
+        # একক চাকরির সুন্দর মেসেজ ফরম্যাট
         formatted_message = (
-            "📢 নতুন চাকরির আপডেটসমূহ (ব্যাচ)\n\n"
-            f"{jobs_joined}\n"
+            "🔥 *নতুন চাকরির খবর* 🔥\n\n"
+            f"📌 *পদ:* {title}\n"
+            f"🏢 *প্রতিষ্ঠান:* {company}\n"
+            f"🔗 {link}\n\n"
             "━━━━━━━━━━━━━━━━━━━\n"
-            "সহজে ও নির্ভুলভাবে আবেদনের জন্য সরাসরি চলে আসুন:\n"
-            "👉 এরশাদ কম্পিউটার & ইন্টারনেট পেমেন্ট\n"
-            "📍 আগ্রাদ্বিগুণ বাজার, ভিআইপি রোড, ধামইরহাট, নওগাঁ\n"
+            "💻 *জারি করেছেন:* এরশাদ কম্পিউটার & ইন্টারনেট পেমেন্ট\n"
+            "📍 *ঠিকানা:* আগ্রাদ্বিগুণ বাজার, ভিআইপি রোড, ধামইরহাট, নওগাঁ\n"
+            "👉 অনলাইনে নির্ভুল আবেদনের জন্য আমাদের দোকানে আসুন।\n"
             "📞 যোগাযোগ: 01309897414"
         )
         
-        # পাঠানো শেষ হলে ফায়ারবেসে টেস্টিং বা ফ্ল্যাগ আপডেট করে দেওয়া যাতে ডুপ্লিকেট না যায়
-        for doc in batch_docs:
-            doc.reference.update({'sent_to_whatsapp': True})
-            
-        return formatted_message
+        # হোয়াটসঅ্যাপে পাঠানো
+        send_to_whatsapp(formatted_message)
+        
+        # পাঠানো শেষ হলে ফায়ারবেসে স্ট্যাটাস true করে দেওয়া
+        doc.reference.update({'sent_to_whatsapp': True})
         
     except Exception as e:
-        print(f"Error reading from Firebase: {e}")
-        
-    return None
+        print(f"Error sending single job: {e}")
 
 def main():
-    print("Running automated job sync and broadcast...")
-    # ১. প্রথমে টেলিটক সাইট থেকে নতুন জব চেক করে ফায়ারবেসে আপডেট করবে
-    scrape_and_store_teletalk_jobs()
-    
-    # ২. ফায়ারবেস থেকে ১০-১৫টি নতুন জব নিয়ে হোয়াটসঅ্যাপে পাঠাবে
-    batch_message = get_pending_jobs_batch_from_firebase()
-    
-    if batch_message:
-        send_to_whatsapp(batch_message)
+    print("Running automated single-job broadcast...")
+    fetch_and_store_jobs()
+    send_single_job_from_firebase()
 
 if __name__ == "__main__":
     main()
